@@ -9,6 +9,10 @@ from tqdm import tqdm
 import json
 from plyfile import PlyData, PlyElement
 
+#modification-dhiraj
+from pypcd import pypcd
+from collections import OrderedDict
+
 def get_segmentation_classes(root):
     catfile = os.path.join(root, 'synsetoffset2category.txt')
     cat = {}
@@ -97,6 +101,7 @@ class ShapeNetDataset(data.Dataset):
             for fn in self.meta[item]:
                 self.datapath.append((item, fn[0], fn[1]))
 
+        #self.classes is map of "Class Names: ID" ID is integer value generated
         self.classes = dict(zip(sorted(self.cat), range(len(self.cat))))
         print(self.classes)
         with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../misc/num_seg_classes.txt'), 'r') as f:
@@ -106,7 +111,8 @@ class ShapeNetDataset(data.Dataset):
         self.num_seg_classes = self.seg_classes[list(self.cat.keys())[0]]
         print(self.seg_classes, self.num_seg_classes)
 
-    def __getitem__(self, index):
+    #getitem returns => point_set and label 
+    def __getitem__(self, index): 
         fn = self.datapath[index]
         cls = self.classes[self.datapath[index][0]]
         point_set = np.loadtxt(fn[1]).astype(np.float32)
@@ -190,6 +196,63 @@ class ModelNetDataset(data.Dataset):
 
     def __len__(self):
         return len(self.fns)
+
+class DMUDataset(data.Dataset):
+    def __init__(self, 
+                dataPath,
+                npoints,
+                split,
+                classification=True,):
+        self.npoints = npoints
+        self.dataPath = dataPath
+
+        with open(os.path.join(dataPath, "train_test_split.json"), 'r') as iFile:
+            train_test_split = json.load(iFile)
+        
+        self.datasetDict = OrderedDict()
+        if split == "train":
+            self.datasetDict = train_test_split["train"]
+        elif split == "test":
+            self.datasetDict = train_test_split["test"]
+
+        with open(os.path.join(dataPath, "classLabels.txt"), 'r') as iFile:
+            classLabels = iFile.read().splitlines()
+        
+        self.classes = dict(zip(classLabels, range(len(classLabels))))
+
+
+    def __getitem__(self, index):
+        #return a tuple of Tensor of ( points, labelIndex )
+        pcdFilePath = list(self.datasetDict.keys())[index]
+        classLabel = self.datasetDict[pcdFilePath]
+        classID = self.classes[classLabel]
+
+        cloud = pypcd.PointCloud.from_path(pcdFilePath)
+        # convert the structured numpy array to a ndarray
+        pointSet = cloud.pc_data.view(np.float32).reshape(cloud.pc_data.shape + (-1,))
+
+        #extract only "N" number of point from the Point Cloud
+        choice = np.random.choice(len(pointSet), self.npoints, replace=True)
+        pointSet = pointSet[choice, :]
+
+        #Normalize and center and bring it to unit sphere
+        pointSet = pointSet - np.expand_dims(np.mean(pointSet, axis = 0), 0) # center
+        dist = np.max(np.sqrt(np.sum(pointSet ** 2, axis = 1)),0)
+        pointSet = pointSet / dist #scale
+
+        #convert to pytorch tensor
+        pointSet = torch.from_numpy(pointSet)
+        classID = torch.from_numpy(np.array([classID]).astype(np.int64))
+
+        return pointSet, classID
+
+    def __len__(self):
+        #return the length of the dataset
+        return len(self.datasetDict)
+            
+
+
+
 
 if __name__ == '__main__':
     dataset = sys.argv[1]

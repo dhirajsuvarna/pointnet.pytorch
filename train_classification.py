@@ -6,7 +6,7 @@ import torch
 import torch.nn.parallel
 import torch.optim as optim
 import torch.utils.data
-from pointnet.dataset import ShapeNetDataset, ModelNetDataset
+from pointnet.dataset import ShapeNetDataset, ModelNetDataset, DMUDataset
 from pointnet.model import PointNetCls, feature_transform_regularizer
 import torch.nn.functional as F
 from tqdm import tqdm
@@ -18,7 +18,7 @@ parser.add_argument(
 parser.add_argument(
     '--num_points', type=int, default=2500, help='input batch size')
 parser.add_argument(
-    '--workers', type=int, help='number of data loading workers', default=4)
+    '--workers', type=int, help='number of data loading workers', default=4) #debug: change this to 0, to see the flow while debugging
 parser.add_argument(
     '--nepoch', type=int, default=250, help='number of epochs to train for')
 parser.add_argument('--outf', type=str, default='cls', help='output folder')
@@ -35,7 +35,7 @@ blue = lambda x: '\033[94m' + x + '\033[0m'
 opt.manualSeed = random.randint(1, 10000)  # fix seed
 print("Random Seed: ", opt.manualSeed)
 random.seed(opt.manualSeed)
-torch.manual_seed(opt.manualSeed)
+torch.manual_seed(opt.manualSeed) #later: 
 
 if opt.dataset_type == 'shapenet':
     dataset = ShapeNetDataset(
@@ -60,6 +60,20 @@ elif opt.dataset_type == 'modelnet40':
         split='test',
         npoints=opt.num_points,
         data_augmentation=False)
+
+elif opt.dataset_type == 'dmunet':
+    dataset = DMUDataset(
+        dataPath=opt.dataset,
+        classification=True,
+        npoints=opt.num_points,
+        split = 'train')
+
+    test_dataset = DMUDataset(
+        dataPath=opt.dataset,
+        classification=True,
+        npoints=opt.num_points,
+        split = 'test')
+
 else:
     exit('wrong dataset type')
 
@@ -93,7 +107,7 @@ if opt.model != '':
 
 optimizer = optim.Adam(classifier.parameters(), lr=0.001, betas=(0.9, 0.999))
 scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
-classifier.cuda()
+classifier.cuda() #debug: comment this while debugging on cpu
 
 num_batch = len(dataset) / opt.batchSize
 
