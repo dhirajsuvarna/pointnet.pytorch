@@ -10,7 +10,7 @@ from pointnet.dataset import ShapeNetDataset, ModelNetDataset, DMUDataset
 from pointnet.model import PointNetCls, feature_transform_regularizer
 import torch.nn.functional as F
 from tqdm import tqdm
-
+from torch.utils.tensorboard import SummaryWriter
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -111,6 +111,8 @@ optimizer = optim.Adam(classifier.parameters(), lr=0.001, betas=(0.9, 0.999))
 scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
 classifier.cuda() #debug: comment this while debugging on cpu
 
+tb = SummaryWriter() # create SummaryWriter object for Tensorboard
+
 num_batch = len(dataset) / opt.batchSize
 
 for epoch in range(opt.nepoch):
@@ -140,10 +142,15 @@ for epoch in range(opt.nepoch):
 
         pred_choice = pred.data.max(1)[1]
         correct = pred_choice.eq(target.data).cpu().sum()
-        print('[%d: %d/%d] train loss: %f accuracy: %f' % (epoch, i, num_batch, loss.item(), correct.item() / float(opt.batchSize)))
+        accuracy = correct.item() / float(opt.batchSize)
+        print('[%d: %d/%d] train loss: %f accuracy: %f' % (epoch, i, num_batch, loss.item(), accuracy))
         print(f"Predictions: {torch.argmax(pred, dim=1)}")
         print(f"Targets: {target}")
         print(f"NLL-Loss {loss}")
+
+        # Write to Tensorboard
+        tb.add_scalar("Training Loss", loss.item(), num_batch)
+        tb.add_scalar("Training Accuracy", accuracy, num_batch)
 
         if i % 10 == 0:
             j, data = next(enumerate(testdataloader, 0))
@@ -157,25 +164,33 @@ for epoch in range(opt.nepoch):
             loss = F.nll_loss(pred, target)
             pred_choice = pred.data.max(1)[1]
             correct = pred_choice.eq(target.data).cpu().sum()
-            print('[%d: %d/%d] %s loss: %f accuracy: %f' % (epoch, i, num_batch, blue('test'), loss.item(), correct.item()/float(opt.batchSize)))
+            accuracy = correct.item()/float(opt.batchSize)
+            print('[%d: %d/%d] %s loss: %f accuracy: %f' % (epoch, i, num_batch, blue('test'), loss.item(), accuracy))
             print(f"Predictions: {torch.argmax(pred, dim=1)}")
             print(f"Targets: {target}")
             print(f"NLL-Loss {loss}")
 
+            # Write to Tensorboard
+            tb.add_scalar("Test Loss", loss.item(), num_batch)
+            tb.add_scalar("Test Accuracy", accuracy, num_batch)
+
     torch.save(classifier.state_dict(), '%s/cls_model_%d.pth' % (opt.outf, epoch))
 
-total_correct = 0
-total_testset = 0
-for i,data in tqdm(enumerate(testdataloader, 0)):
-    points, target, files = data
-    target = target[:, 0]
-    points = points.transpose(2, 1)
-    points, target = points.cuda(), target.cuda()
-    classifier = classifier.eval()
-    pred, _, _ = classifier(points)
-    pred_choice = pred.data.max(1)[1]
-    correct = pred_choice.eq(target.data).cpu().sum()
-    total_correct += correct.item()
-    total_testset += points.size()[0]
+tb.close()
+
+with torch.no_grad:
+    total_correct = 0
+    total_testset = 0
+    for i,data in tqdm(enumerate(testdataloader, 0)):
+        points, target, files = data
+        target = target[:, 0]
+        points = points.transpose(2, 1)
+        points, target = points.cuda(), target.cuda()
+        classifier = classifier.eval()
+        pred, _, _ = classifier(points)
+        pred_choice = pred.data.max(1)[1]
+        correct = pred_choice.eq(target.data).cpu().sum()
+        total_correct += correct.item()
+        total_testset += points.size()[0]
 
 print("final accuracy {}".format(total_correct / float(total_testset)))
