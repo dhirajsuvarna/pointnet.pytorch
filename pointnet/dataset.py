@@ -235,6 +235,7 @@ class DMUDataset(data.Dataset):
         choice = np.random.choice(len(pointSet), self.npoints, replace=True)
         pointSet = pointSet[choice, :]
 
+        #print(f"Normalizing: {pcdFilePath}")
         #Normalize and center and bring it to unit sphere
         pointSet = pointSet - np.expand_dims(np.mean(pointSet, axis = 0), 0) # center
         dist = np.max(np.sqrt(np.sum(pointSet ** 2, axis = 1)),0)
@@ -244,7 +245,7 @@ class DMUDataset(data.Dataset):
         pointSet = torch.from_numpy(pointSet)
         classID = torch.from_numpy(np.array([classID]).astype(np.int64))
 
-        return pointSet, classID
+        return pointSet, classID, os.path.basename(pcdFilePath)
 
     def __len__(self):
         #return the length of the dataset
