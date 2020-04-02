@@ -1,4 +1,6 @@
-# create a two text file with train and test shuffles
+# Creates following files
+# 1. train_test_split.json - file containing train and test split of dataset
+# 2. classlabels.txt - file containing Class Names or Category Names
 
 # output will be of the following format 
 # {
@@ -45,8 +47,10 @@ datasetPath = args.input_path
 splitPercent = args.split_percent
 
 outputFilePath = os.path.join(datasetPath, "train_test_split.json")
+classLabelFilePath = os.path.join(datasetPath, "classlabels.txt")
 
 train_test_Dict = {"train": {}, "test": {}}
+classLabels = []
 
 for labelDir in os.listdir(datasetPath):
     labelDirPath = os.path.join(datasetPath, labelDir)
@@ -65,11 +69,15 @@ for labelDir in os.listdir(datasetPath):
         train_test_Dict["train"].update({f:labelDir for f in trainFiles})
         train_test_Dict["test"].update({f:labelDir for f in testFiles})
 
+        classLabels.append(labelDir)
         print(f"debug: {labelDir} => totalFiles: {numFiles}, train: {len(trainFiles)} + test: {len(testFiles)} = {len(trainFiles) + len(testFiles)} ")
 
 with open(outputFilePath, 'w') as outFile:    
     json.dump(train_test_Dict, outFile, indent=4)
-    
+
+with open(classLabelFilePath, 'w') as classLabelFile:
+    for label in classLabels:
+        classLabelFile.write('%s\n', label)
 
 
 
