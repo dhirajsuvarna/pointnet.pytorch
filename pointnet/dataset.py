@@ -215,7 +215,7 @@ class DMUDataset(data.Dataset):
         elif split == "test":
             self.datasetDict = train_test_split["test"]
 
-        with open(os.path.join(dataPath, "classLabels.txt"), 'r') as iFile:
+        with open(os.path.join(dataPath, "classlabels.txt"), 'r') as iFile:
             classLabels = iFile.read().splitlines()
         
         self.classes = dict(zip(classLabels, range(len(classLabels))))

@@ -1,4 +1,4 @@
-# Information about the Dataeset Utility Folder 
+# Information about the Dataset Utility Folder 
 
 ## Expected Folder Structure in Dataset
 
