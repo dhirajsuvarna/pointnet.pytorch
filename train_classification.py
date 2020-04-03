@@ -112,6 +112,7 @@ scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
 classifier.cuda() #debug: comment this while debugging on cpu
 
 tb = SummaryWriter() # create SummaryWriter object for Tensorboard
+tb.add_graph(classifier) # adding network to tensorboard
 
 num_batch = len(dataset) / opt.batchSize
 
@@ -127,30 +128,27 @@ for epoch in range(opt.nepoch):
         classifier = classifier.train()
         with torch.autograd.detect_anomaly():
             pred, trans, trans_feat = classifier(points)
-            loss = F.nll_loss(pred, target)
+            train_loss = F.nll_loss(pred, target)
             if opt.feature_transform:
-                loss += feature_transform_regularizer(trans_feat) * 0.001
+                train_loss += feature_transform_regularizer(trans_feat) * 0.001
             # print(f"f3 Weights Min: {classifier.fc3.weight.min()}")
             # print(f"f3 Weights Max: {classifier.fc3.weight.max()}")
             
-            loss.backward()
+            train_loss.backward()
             
             # print(f"f3 Gradients Min: {classifier.fc3.weight.grad.min()}")
             # print(f"f3 Gradients Max: {classifier.fc3.weight.grad.max()}")
 
             optimizer.step()
 
+        train_loss += train_loss.item()
         pred_choice = pred.data.max(1)[1]
         correct = pred_choice.eq(target.data).cpu().sum()
-        accuracy = correct.item() / float(opt.batchSize)
-        print('[%d: %d/%d] train loss: %f accuracy: %f' % (epoch, i, num_batch, loss.item(), accuracy))
+        train_acc = correct.item() / float(opt.batchSize)
+        print('[%d: %d/%d] train loss: %f accuracy: %f' % (epoch, i, num_batch, train_loss.item(), train_acc))
         print(f"Predictions: {torch.argmax(pred, dim=1)}")
         print(f"Targets: {target}")
-        print(f"NLL-Loss {loss}")
-
-        # Write to Tensorboard
-        tb.add_scalar("Training Loss", loss.item(), i)
-        tb.add_scalar("Training Accuracy", accuracy, i)
+        print(f"NLL-Loss {train_loss}")
 
         if i % 10 == 0:
             j, data = next(enumerate(testdataloader, 0))
@@ -161,18 +159,20 @@ for epoch in range(opt.nepoch):
             points, target = points.cuda(), target.cuda()
             classifier = classifier.eval()
             pred, _, _ = classifier(points)
-            loss = F.nll_loss(pred, target)
+            test_loss = F.nll_loss(pred, target)
             pred_choice = pred.data.max(1)[1]
             correct = pred_choice.eq(target.data).cpu().sum()
-            accuracy = correct.item()/float(opt.batchSize)
-            print('[%d: %d/%d] %s loss: %f accuracy: %f' % (epoch, i, num_batch, blue('test'), loss.item(), accuracy))
+            test_acc = correct.item()/float(opt.batchSize)
+            print('[%d: %d/%d] %s loss: %f accuracy: %f' % (epoch, i, num_batch, blue('test'), test_loss.item(), test_acc))
             print(f"Predictions: {torch.argmax(pred, dim=1)}")
             print(f"Targets: {target}")
-            print(f"NLL-Loss {loss}")
+            print(f"NLL-Loss {test_loss}")
 
             # Write to Tensorboard
-            tb.add_scalar("Test Loss", loss.item(), i)
-            tb.add_scalar("Test Accuracy", accuracy, i)
+            tb.add_scalar("Training Loss", train_loss.item(), epoch)
+            tb.add_scalar("Training Accuracy", train_acc, epoch)
+            tb.add_scalar("Test Loss", test_loss.item(), epoch)
+            tb.add_scalar("Test Accuracy", test_acc, epoch)
 
     torch.save(classifier.state_dict(), '%s/cls_model_%d.pth' % (opt.outf, epoch))
 
