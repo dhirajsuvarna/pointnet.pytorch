@@ -112,7 +112,7 @@ scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
 classifier.cuda() #debug: comment this while debugging on cpu
 
 tb = SummaryWriter() # create SummaryWriter object for Tensorboard
-tb.add_graph(classifier) # adding network to tensorboard
+#tb.add_graph(classifier) # adding network to tensorboard
 
 num_batch = len(dataset) / opt.batchSize
 
