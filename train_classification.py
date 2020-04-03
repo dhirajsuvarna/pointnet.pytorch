@@ -21,7 +21,7 @@ parser.add_argument(
     '--workers', type=int, help='number of data loading workers', default=4) #debug: change this to 0, to see the flow while debugging
 parser.add_argument(
     '--nepoch', type=int, default=250, help='number of epochs to train for')
-parser.add_argument('--outf', type=str, default='cls', help='output folder')
+parser.add_argument('--outf', type=str, default='saved_models', help='output folder')
 parser.add_argument('--model', type=str, default='', help='model path')
 parser.add_argument('--dataset', type=str, required=True, help="dataset path")
 parser.add_argument('--dataset_type', type=str, default='shapenet', help="dataset type shapenet|modelnet40")
@@ -149,8 +149,8 @@ for epoch in range(opt.nepoch):
         print(f"NLL-Loss {loss}")
 
         # Write to Tensorboard
-        tb.add_scalar("Training Loss", loss.item(), num_batch)
-        tb.add_scalar("Training Accuracy", accuracy, num_batch)
+        tb.add_scalar("Training Loss", loss.item(), i)
+        tb.add_scalar("Training Accuracy", accuracy, i)
 
         if i % 10 == 0:
             j, data = next(enumerate(testdataloader, 0))
@@ -171,26 +171,26 @@ for epoch in range(opt.nepoch):
             print(f"NLL-Loss {loss}")
 
             # Write to Tensorboard
-            tb.add_scalar("Test Loss", loss.item(), num_batch)
-            tb.add_scalar("Test Accuracy", accuracy, num_batch)
+            tb.add_scalar("Test Loss", loss.item(), i)
+            tb.add_scalar("Test Accuracy", accuracy, i)
 
     torch.save(classifier.state_dict(), '%s/cls_model_%d.pth' % (opt.outf, epoch))
 
 tb.close()
 
-with torch.no_grad:
-    total_correct = 0
-    total_testset = 0
-    for i,data in tqdm(enumerate(testdataloader, 0)):
-        points, target, files = data
-        target = target[:, 0]
-        points = points.transpose(2, 1)
-        points, target = points.cuda(), target.cuda()
-        classifier = classifier.eval()
-        pred, _, _ = classifier(points)
-        pred_choice = pred.data.max(1)[1]
-        correct = pred_choice.eq(target.data).cpu().sum()
-        total_correct += correct.item()
-        total_testset += points.size()[0]
+
+total_correct = 0
+total_testset = 0
+for i,data in tqdm(enumerate(testdataloader, 0)):
+    points, target, files = data
+    target = target[:, 0]
+    points = points.transpose(2, 1)
+    points, target = points.cuda(), target.cuda()
+    classifier = classifier.eval()
+    pred, _, _ = classifier(points)
+    pred_choice = pred.data.max(1)[1]
+    correct = pred_choice.eq(target.data).cpu().sum()
+    total_correct += correct.item()
+    total_testset += points.size()[0]
 
 print("final accuracy {}".format(total_correct / float(total_testset)))
