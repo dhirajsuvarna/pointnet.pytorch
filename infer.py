@@ -1,22 +1,42 @@
 # Script to Perform Inference on the Trained Model
 #
+import os
+import sys
+import argparse
 import torch
 import numpy as np
 from pointnet.model import PointNetCls, feature_transform_regularizer
 from pypcd import pypcd
 
-# Load the Model from the saved path
-num_classes = 32
-feature_transform = None
-saved_model = r"F:\projects\ai\pointnet\dhiraj\pointnet.pytorch\saved_models\cls_model_49.pth"
-num_points = 4000
-classLabelsPath = r"F:\projects\ai\pointnet\dataset\DMUNet_OBJ_format\dataset_PCD_5000\classlabels.txt"
+# parse command line arguments
+parser = argparse.ArgumentParser()
 
+parser.add_argument("--cad_folder", required=True, help="Folder containing 3D CAD Models for prediction")
+parser.add_argument("--trained_nn_model", required=True, help="Trained Neural Network Model")
+parser.add_argument("--class_lables_path", required=True, help="Path to the file containing class Labels")
+
+args = parser.parse_args()
+
+classLabelsPath = args.class_lables_path
+saved_model = args.trained_nn_model
+cad_model_folder = args.cad_folder
+
+# few hardcoded stuff 
+num_points = 4000
+feature_transform = None
+
+#input check 
+if not os.path.isdir(cad_model_folder):
+    print(f"{cad_model_folder} : not a directory")
+    sys.exit()
 
 # Read ClassNames and store in List
 with open(classLabelsPath, 'r') as classFile:
     classLabels = classFile.read().splitlines()
 
+num_classes = len(classLabels)
+
+# Load the Model from the saved path
 model = PointNetCls(k=num_classes, feature_transform=feature_transform)
 
 device = torch.device('cpu')
@@ -24,34 +44,36 @@ state_dict = torch.load(saved_model, map_location=device)
 model.load_state_dict(state_dict)
 
 
-# write a function to do single inference
-def infer_single_model(model, inputModelPath):
-    # read point cloud data
-    cloud = pypcd.PointCloud.from_path(inputModelPath)
-    # convert the structured numpy array to a ndarray
-    pointSet = cloud.pc_data.view(np.float32).reshape(cloud.pc_data.shape + (-1,))
+for root, subdirs, files in os.walk(cad_model_folder):
+    for fileName in files:
+        cadFilePath = os.path.join(root, fileName)
+        # check the file 
+        if not cadFilePath.endswith('.pcd'):
+            print(f"{cadFilePath}: not a valid pcd file")
+            continue
 
-    # extract only "N" number of point from the Point Cloud
-    choice = np.random.choice(len(pointSet), num_points, replace=True)
-    pointSet = pointSet[choice, :]
+        # read point cloud data
+        cloud = pypcd.PointCloud.from_path(cadFilePath)
+        # convert the structured numpy array to a ndarray
+        pointSet = cloud.pc_data.view(np.float32).reshape(cloud.pc_data.shape + (-1,))
 
-    # Normalize and center and bring it to unit sphere
-    pointSet = pointSet - np.expand_dims(np.mean(pointSet, axis = 0), 0) # center
-    dist = np.max(np.sqrt(np.sum(pointSet ** 2, axis = 1)),0)
-    pointSet = pointSet / dist #scale
+        # extract only "N" number of point from the Point Cloud
+        choice = np.random.choice(len(pointSet), num_points, replace=True)
+        pointSet = pointSet[choice, :]
 
-    # convert to pytorch tensor
-    points = torch.from_numpy(pointSet)
-    points = torch.unsqueeze(points, 0)
-    points = points.transpose(2, 1)
-    #points = points.cuda()
-    model = model.eval()
-    pred, _, _ = model(points)
-    return pred
+        # Normalize and center and bring it to unit sphere
+        pointSet = pointSet - np.expand_dims(np.mean(pointSet, axis = 0), 0) # center
+        dist = np.max(np.sqrt(np.sum(pointSet ** 2, axis = 1)),0)
+        pointSet = pointSet / dist #scale
 
+        # convert to pytorch tensor
+        points = torch.from_numpy(pointSet)
+        points = torch.unsqueeze(points, 0)
+        points = points.transpose(2, 1)
+        #points = points.cuda()
+        model = model.eval()
+        pred, _, _ = model(points)
 
-model_to_infer = r"F:\projects\ai\pointnet\dataset\DMUNet_OBJ_format\unseen_data\Gear_1.pcd"
-pred = infer_single_model(model, model_to_infer)
-classID = torch.argmax(pred, dim=1)
-className = classLabels[classID]
-print(f"Predictions: {classID} : {className}")
+        classID = torch.argmax(pred, dim=1)
+        className = classLabels[classID]
+        print(f"{cadFilePath}: {classID} : {className}")
