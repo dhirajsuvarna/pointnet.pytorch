@@ -39,8 +39,13 @@ num_classes = len(classLabels)
 # Load the Model from the saved path
 model = PointNetCls(k=num_classes, feature_transform=feature_transform)
 
+# if Running on CPU
 device = torch.device('cpu')
 state_dict = torch.load(saved_model, map_location=device)
+
+# if Running on GPU
+# state_dict = torch.load(saved_model) #uncomment this if running on GPU
+
 model.load_state_dict(state_dict)
 
 
@@ -70,7 +75,7 @@ for root, subdirs, files in os.walk(cad_model_folder):
         points = torch.from_numpy(pointSet)
         points = torch.unsqueeze(points, 0)
         points = points.transpose(2, 1)
-        #points = points.cuda()
+        #points = points.cuda() #uncomment this if running on GPU
         model = model.eval()
         pred, _, _ = model(points)
 
