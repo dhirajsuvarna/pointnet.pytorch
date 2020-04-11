@@ -1,4 +1,4 @@
-# Script to Perform Inference on the Trained Model
+# Script to Perform Inference on the Trained Model for Classification Problem
 #
 import os
 import sys
@@ -37,15 +37,13 @@ with open(classLabelsPath, 'r') as classFile:
 num_classes = len(classLabels)
 
 # Load the Model from the saved path
-model = PointNetCls(k=num_classes, feature_transform=feature_transform)
-
 # if Running on CPU
 device = torch.device('cpu')
 state_dict = torch.load(saved_model, map_location=device)
 
 # if Running on GPU
 # state_dict = torch.load(saved_model) #uncomment this if running on GPU
-
+model = PointNetCls(k=num_classes, feature_transform=feature_transform)
 model.load_state_dict(state_dict)
 
 
@@ -62,6 +60,7 @@ for root, subdirs, files in os.walk(cad_model_folder):
         # convert the structured numpy array to a ndarray
         pointSet = cloud.pc_data.view(np.float32).reshape(cloud.pc_data.shape + (-1,))
 
+        # THE BELOW STEPS ARE NOT DONE BY fxia22 IN HIS REPOSITORY 
         # extract only "N" number of point from the Point Cloud
         choice = np.random.choice(len(pointSet), num_points, replace=True)
         pointSet = pointSet[choice, :]
@@ -70,6 +69,7 @@ for root, subdirs, files in os.walk(cad_model_folder):
         pointSet = pointSet - np.expand_dims(np.mean(pointSet, axis = 0), 0) # center
         dist = np.max(np.sqrt(np.sum(pointSet ** 2, axis = 1)),0)
         pointSet = pointSet / dist #scale
+        # THE ABOVE STEPS ARE NOT DONE BY fxia22 IN HIS REPOSITORY 
 
         # convert to pytorch tensor
         points = torch.from_numpy(pointSet)
