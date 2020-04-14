@@ -245,7 +245,7 @@ class DMUDataset(data.Dataset):
         pointSet = torch.from_numpy(pointSet)
         classID = torch.from_numpy(np.array([classID]).astype(np.int64))
 
-        return pointSet, classID, os.path.basename(pcdFilePath)
+        return pointSet, classID
 
     def __len__(self):
         #return the length of the dataset

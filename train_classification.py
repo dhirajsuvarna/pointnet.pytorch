@@ -13,14 +13,10 @@ from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
 
 parser = argparse.ArgumentParser()
-parser.add_argument(
-    '--batchSize', type=int, default=32, help='input batch size')
-parser.add_argument(
-    '--num_points', type=int, default=2500, help='input batch size')
-parser.add_argument(
-    '--workers', type=int, help='number of data loading workers', default=4) #debug: change this to 0, to see the flow while debugging
-parser.add_argument(
-    '--nepoch', type=int, default=250, help='number of epochs to train for')
+parser.add_argument('--batchSize', type=int, default=32, help='input batch size')
+parser.add_argument('--num_points', type=int, default=2500, help='input batch size')
+parser.add_argument('--workers', type=int, help='number of data loading workers', default=4)
+parser.add_argument('--nepoch', type=int, default=250, help='number of epochs to train for')
 parser.add_argument('--outf', type=str, default='saved_models', help='output folder')
 parser.add_argument('--model', type=str, default='', help='model path')
 parser.add_argument('--dataset', type=str, required=True, help="dataset path")
@@ -119,11 +115,10 @@ num_batch = len(dataset) / opt.batchSize
 for epoch in range(opt.nepoch):
     scheduler.step()
     for i, data in enumerate(dataloader, 0):
-        points, target, files = data
-        print(f"Processing Files: {files}")
+        points, target = data
         target = target[:, 0]
         points = points.transpose(2, 1)
-        points, target = points.cuda(), target.cuda()
+        points, target = points.cuda(), target.cuda() #comment if debugging on cpu
         optimizer.zero_grad()
         classifier = classifier.train()
         with torch.autograd.detect_anomaly():
@@ -152,8 +147,7 @@ for epoch in range(opt.nepoch):
 
         if i % 10 == 0:
             j, data = next(enumerate(testdataloader, 0))
-            points, target, files = data
-            print(f"Processing Files: {files}")
+            points, target = data
             target = target[:, 0]
             points = points.transpose(2, 1)
             points, target = points.cuda(), target.cuda()
@@ -169,10 +163,10 @@ for epoch in range(opt.nepoch):
             print(f"NLL-Loss {test_loss}")
 
             # Write to Tensorboard
-            tb.add_scalar("Training Loss", train_loss.item(), epoch)
-            tb.add_scalar("Training Accuracy", train_acc, epoch)
-            tb.add_scalar("Test Loss", test_loss.item(), epoch)
-            tb.add_scalar("Test Accuracy", test_acc, epoch)
+            tb.add_scalar("Training Loss", train_loss.item(), epoch) # here the last term should not be epoch
+            tb.add_scalar("Training Accuracy", train_acc, epoch) # here the last term should not be epoch
+            tb.add_scalar("Test Loss", test_loss.item(), epoch) # here the last term should not be epoch
+            tb.add_scalar("Test Accuracy", test_acc, epoch) # here the last term should not be epoch
 
     torch.save(classifier.state_dict(), '%s/cls_model_%d.pth' % (opt.outf, epoch))
 
@@ -182,7 +176,7 @@ tb.close()
 total_correct = 0
 total_testset = 0
 for i,data in tqdm(enumerate(testdataloader, 0)):
-    points, target, files = data
+    points, target = data
     target = target[:, 0]
     points = points.transpose(2, 1)
     points, target = points.cuda(), target.cuda()
