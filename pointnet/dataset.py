@@ -230,7 +230,7 @@ class DMUDataset(data.Dataset):
         classID = self.classes[classLabel]
 
         cloud = o3d.io.read_point_cloud(pcdFilePath)
-        pointSet = cloud.points
+        pointSet = np.asarray(cloud.points)
 
         #extract only "N" number of point from the Point Cloud
         choice = np.random.choice(len(pointSet), self.npoints, replace=True)
