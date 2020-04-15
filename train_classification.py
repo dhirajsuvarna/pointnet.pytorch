@@ -187,8 +187,8 @@ for i,data in tqdm(enumerate(testdataloader, 0)):
     classifier = classifier.eval()
     pred, _, _ = classifier(points)
     pred_choice = pred.data.max(1)[1]
-    all_preds = torch.cat(all_preds, torch.argmax(pred, dim=1), dim=0)
-    all_targets = torch.cat(all_targets, target)
+    all_preds = torch.cat((all_preds, torch.argmax(pred, dim=1)), dim=0)
+    all_targets = torch.cat((all_targets, target))
     correct = pred_choice.eq(target.data).cpu().sum()
     total_correct += correct.item()
     total_testset += points.size()[0]
