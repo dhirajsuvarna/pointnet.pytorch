@@ -108,6 +108,7 @@ optimizer = optim.Adam(classifier.parameters(), lr=0.001, betas=(0.9, 0.999))
 scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
 classifier.cuda() #debug: comment this while debugging on cpu
 
+
 tb = SummaryWriter() # create SummaryWriter object for Tensorboard
 #tb.add_graph(classifier) # adding network to tensorboard
 
@@ -176,6 +177,8 @@ tb.close()
 
 total_correct = 0
 total_testset = 0
+all_preds = torch.tensor([])
+all_targets = torch.tensor([])
 for i,data in tqdm(enumerate(testdataloader, 0)):
     points, target = data
     target = target[:, 0]
@@ -184,8 +187,24 @@ for i,data in tqdm(enumerate(testdataloader, 0)):
     classifier = classifier.eval()
     pred, _, _ = classifier(points)
     pred_choice = pred.data.max(1)[1]
+    all_preds = torch.cat(all_preds, torch.argmax(pred, dim=1), dim=0)
+    all_targets = torch.cat(all_targets, target)
     correct = pred_choice.eq(target.data).cpu().sum()
     total_correct += correct.item()
     total_testset += points.size()[0]
 
+print(f"Shape of all_preds: {all_preds.shape}")
+print(f"Shape of all_targets: {all_targets.shape}")
 print("final accuracy {}".format(total_correct / float(total_testset)))
+
+################################
+# Generate Confusion Matrix
+################################
+import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix
+import plotcm
+
+classNames = [ v for k, v in dataset.classes ]
+cm = confusion_matrix(targets, predictions)
+plt.figure(figsize=(len(classNames),len(classNames)))
+plotcm.plot_confusion_matrix(cm, names)
