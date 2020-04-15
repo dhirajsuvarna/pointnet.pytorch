@@ -177,8 +177,8 @@ tb.close()
 
 total_correct = 0
 total_testset = 0
-all_preds = torch.tensor([])
-all_targets = torch.tensor([])
+all_preds = torch.tensor(data=[],dtype=torch.long).cuda()
+all_targets = torch.tensor(data=[], dtype=torch.long).cuda()
 for i,data in tqdm(enumerate(testdataloader, 0)):
     points, target = data
     target = target[:, 0]
@@ -202,9 +202,11 @@ print("final accuracy {}".format(total_correct / float(total_testset)))
 ################################
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
-import plotcm
+import plot_cm
 
-classNames = [ v for k, v in dataset.classes ]
-cm = confusion_matrix(targets, predictions)
+classNames = [ k for k, v in dataset.classes.items() ]
+all_targets = all_targets.cpu().numpy()
+all_preds = all_preds.cpu().numpy()
+cm = confusion_matrix(all_targets, all_preds)
 plt.figure(figsize=(len(classNames),len(classNames)))
-plotcm.plot_confusion_matrix(cm, names)
+plot_cm.plot_confusion_matrix(cm, classNames)
