@@ -246,8 +246,8 @@ class DMUDataset(data.Dataset):
         if self.data_augmentation: #should not be done for test dataset, hence a flag
             theta = np.random.uniform(0, np.pi * 2)
             rotation_matrix = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
-            point_set[:, [0, 2]] = point_set[:, [0, 2]].dot(rotation_matrix)  # random rotation
-            point_set += np.random.normal(0, 0.02, size=point_set.shape)  # random jitter
+            pointSet[:, [0, 2]] = pointSet[:, [0, 2]].dot(rotation_matrix)  # random rotation
+            pointSet += np.random.normal(0, 0.02, size=pointSet.shape)  # random jitter
 
         #convert to pytorch tensor
         pointSet = torch.from_numpy(pointSet)
