@@ -10,7 +10,7 @@ import json
 from plyfile import PlyData, PlyElement
 
 #modification-dhiraj
-from pypcd import pypcd
+import open3d as o3d
 from collections import OrderedDict
 
 def get_segmentation_classes(root):
@@ -202,9 +202,11 @@ class DMUDataset(data.Dataset):
                 dataPath,
                 npoints,
                 split,
-                classification=True,):
+                classification=True,
+                data_augmentation=True):
         self.npoints = npoints
         self.dataPath = dataPath
+        self.data_augmentation = data_augmentation
 
         with open(os.path.join(dataPath, "train_test_split.json"), 'r') as iFile:
             train_test_split = json.load(iFile)
@@ -227,9 +229,8 @@ class DMUDataset(data.Dataset):
         classLabel = self.datasetDict[pcdFilePath]
         classID = self.classes[classLabel]
 
-        cloud = pypcd.PointCloud.from_path(pcdFilePath)
-        # convert the structured numpy array to a ndarray
-        pointSet = cloud.pc_data.view(np.float32).reshape(cloud.pc_data.shape + (-1,))
+        cloud = o3d.io.read_point_cloud(pcdFilePath)
+        pointSet = cloud.points
 
         #extract only "N" number of point from the Point Cloud
         choice = np.random.choice(len(pointSet), self.npoints, replace=True)
@@ -240,6 +241,13 @@ class DMUDataset(data.Dataset):
         pointSet = pointSet - np.expand_dims(np.mean(pointSet, axis = 0), 0) # center
         dist = np.max(np.sqrt(np.sum(pointSet ** 2, axis = 1)),0)
         pointSet = pointSet / dist #scale
+
+        # perform random data agumentation
+        if self.data_augmentation: #should not be done for test dataset, hence a flag
+            theta = np.random.uniform(0, np.pi * 2)
+            rotation_matrix = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
+            point_set[:, [0, 2]] = point_set[:, [0, 2]].dot(rotation_matrix)  # random rotation
+            point_set += np.random.normal(0, 0.02, size=point_set.shape)  # random jitter
 
         #convert to pytorch tensor
         pointSet = torch.from_numpy(pointSet)

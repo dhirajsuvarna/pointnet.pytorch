@@ -6,7 +6,7 @@ import argparse
 import torch
 import numpy as np
 from pointnet.model import PointNetCls, feature_transform_regularizer
-from pypcd import pypcd
+import open3d as o3d
 
 # parse command line arguments
 parser = argparse.ArgumentParser()
@@ -56,9 +56,8 @@ for root, subdirs, files in os.walk(cad_model_folder):
             continue
 
         # read point cloud data
-        cloud = pypcd.PointCloud.from_path(cadFilePath)
-        # convert the structured numpy array to a ndarray
-        pointSet = cloud.pc_data.view(np.float32).reshape(cloud.pc_data.shape + (-1,))
+        cloud = o3d.io.read_point_cloud(cadFilePath)
+        pointSet = cloud.points
 
         # THE BELOW STEPS ARE NOT DONE BY fxia22 IN HIS REPOSITORY 
         # extract only "N" number of point from the Point Cloud

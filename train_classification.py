@@ -68,7 +68,8 @@ elif opt.dataset_type == 'dmunet':
         dataPath=opt.dataset,
         classification=True,
         npoints=opt.num_points,
-        split = 'test')
+        split = 'test',
+        data_augmentation=False)
 
 else:
     exit('wrong dataset type')
