@@ -250,7 +250,7 @@ class DMUDataset(data.Dataset):
             pointSet += np.random.normal(0, 0.02, size=pointSet.shape)  # random jitter
 
         #convert to pytorch tensor
-        pointSet = torch.from_numpy(pointSet)
+        pointSet = torch.from_numpy(pointSet).float()   #convert to float32
         classID = torch.from_numpy(np.array([classID]).astype(np.int64))
 
         return pointSet, classID
