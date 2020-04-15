@@ -1,4 +1,6 @@
 # Script to generate image from Point Cloud file (.pcd)
+# Generates images in three views
+# todo: need to add color channels to the images
 
 import open3d as o3d
 import numpy as np
