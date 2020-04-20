@@ -11,3 +11,4 @@ seg/
 *.out
 runs_classification/
 *.pth
+*.log
