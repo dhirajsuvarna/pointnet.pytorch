@@ -258,10 +258,74 @@ class DMUDataset(data.Dataset):
     def __len__(self):
         #return the length of the dataset
         return len(self.datasetDict)
-            
 
 
+class DMUDatasetSeg(data.Dataset):
+    def __init__(self, 
+                dataPath,
+                npoints,
+                split,
+                class_choice=None,
+                data_augmentation=True):
+        self.npoints = npoints
+        self.dataPath = dataPath
+        self.data_augmentation = data_augmentation
+        self.seg_classes = {}
 
+        with open(os.path.join(dataPath, "train_test_split.json"), 'r') as iFile:
+            train_test_split = json.load(iFile)
+        
+        self.datasetList = []
+        if split == "train":
+            self.datasetList = train_test_split["train"]
+        elif split == "test":
+            self.datasetList = train_test_split["test"]
+
+        with open(os.path.join(dataPath, "num_seg_classes.txt"), 'r') as numSegClasses:
+            for line in numSegClasses:
+                segCls = line.strip().split()
+                self.seg_classes[segCls[0]] = int(segCls[1])
+
+        self.num_seg_classes = self.seg_classes[class_choice]
+
+    def __len__(self):
+        #return the length of the dataset
+        return len(self.datasetList)
+
+    def __getitem__(self, index):
+        pcdFilePath = self.datasetList[index]
+        #classLabel = self.datasetDict[pcdFilePath]
+        segFilePath = pcdFilePath.replace('.pcd', '.seg')
+
+        #Load Point Segment Label
+        seg = np.loadtxt(segFilePath).astype(np.int64)
+
+        cloud = o3d.io.read_point_cloud(pcdFilePath)
+        pointSet = np.asarray(cloud.points)
+
+        #extract only "N" number of point from the Point Cloud
+        choice = np.random.choice(len(pointSet), self.npoints, replace=True)
+        pointSet = pointSet[choice, :]
+        seg = seg[choice]
+
+        #print(f"Normalizing: {pcdFilePath}")
+        #Normalize and center and bring it to unit sphere
+        pointSet = pointSet - np.expand_dims(np.mean(pointSet, axis = 0), 0) # center
+        dist = np.max(np.sqrt(np.sum(pointSet ** 2, axis = 1)),0)
+        pointSet = pointSet / dist #scale
+
+        # perform random data agumentation
+        if self.data_augmentation: #should not be done for test dataset, hence a flag
+            theta = np.random.uniform(0, np.pi * 2)
+            rotation_matrix = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
+            pointSet[:, [0, 2]] = pointSet[:, [0, 2]].dot(rotation_matrix)  # random rotation
+            pointSet += np.random.normal(0, 0.02, size=pointSet.shape)  # random jitter
+
+        #convert to pytorch tensor
+        pointSet = torch.from_numpy(pointSet).float()   #convert to float32
+        seg = torch.from_numpy(seg)
+
+        return pointSet, seg
 
 if __name__ == '__main__':
     dataset = sys.argv[1]
