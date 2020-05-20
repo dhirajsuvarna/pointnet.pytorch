@@ -103,15 +103,15 @@ def create_split_without_label(datasetPath, outputFilePath, splitPercent, ext):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--input", required=True, help="Path to the Dataset Folder")
+    parser.add_argument("--dataset", required=True, help="Path to the Dataset Folder")
     parser.add_argument("--split_percent", type=int, default=80, help="Split Percentage between Train and Test")
-    parser.add_argument("--ext", required=True, help="Extension of the files to be included")
+    parser.add_argument("--ext", required=True, help="Extension of the files to be included (.pcd)")
     parser.add_argument("--labeled_split", action='store_true', help="Creates split with labels i.e 'Training_Example:Label'")
 
     args = parser.parse_args()
     print(f"Arguments:{args}")
 
-    datasetPath = args.input
+    datasetPath = args.dataset
     splitPercent = args.split_percent
     ext = args.ext
 

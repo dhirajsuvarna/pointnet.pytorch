@@ -11,13 +11,13 @@ import open3d as o3d
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument("--cad_folder", required=True, help="Folder or Path to PCD File containing 3D CAD Models for prediction")
+parser.add_argument("--input_folder", required=True, help="Folder or Path to PCD File containing 3D CAD Models for prediction")
 parser.add_argument("--trained_nn_model", required=True, help="Trained Neural Network Model")
 parser.add_argument("--output_folder", required=True, help="Path to Output Folder")
 
 args = parser.parse_args()
 
-cad_model_folder = args.cad_folder
+cad_model_folder = args.input_folder
 saved_model = args.trained_nn_model
 output_folder = args.output_folder
 
@@ -68,8 +68,7 @@ def infer_segments(model, cadFilePath):
 
     pred_choice = pred.data.max(2)[1]
     pred_choice = torch.squeeze(pred_choice)
-    print(f"pred_choice.shape: {pred_choice.shape}")
-    print(f"{pred_choice}")
+    print(f"{cadFilePath} : {pred_choice}")
 
     color_matrix = np.empty(pointSet.shape)
     for i in range(color_matrix.shape[0]):

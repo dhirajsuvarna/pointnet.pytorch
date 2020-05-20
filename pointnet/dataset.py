@@ -208,7 +208,11 @@ class DMUDataset(data.Dataset):
         self.dataPath = dataPath
         self.data_augmentation = data_augmentation
 
-        with open(os.path.join(dataPath, "train_test_split.json"), 'r') as iFile:
+        train_test_split_filename = "train_test_split_classification.json"
+        if not os.path.exists(os.path.join(dataPath, train_test_split_filename)):
+            print(f"Expecting a file {train_test_split_filename}")
+
+        with open(os.path.join(dataPath, train_test_split_filename), 'r') as iFile:
             train_test_split = json.load(iFile)
         
         self.datasetDict = OrderedDict()
@@ -272,7 +276,11 @@ class DMUDatasetSeg(data.Dataset):
         self.data_augmentation = data_augmentation
         self.seg_classes = {}
 
-        with open(os.path.join(dataPath, "train_test_split.json"), 'r') as iFile:
+        train_test_split_filename = "train_test_split_segmentation.json"
+        if not os.path.exists(os.path.join(dataPath, train_test_split_filename)):
+            print(f"Expecting a file {train_test_split_filename}")
+
+        with open(os.path.join(dataPath, train_test_split_filename), 'r') as iFile:
             train_test_split = json.load(iFile)
         
         self.datasetList = []
